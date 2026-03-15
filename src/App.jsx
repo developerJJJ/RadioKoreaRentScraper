@@ -1,21 +1,60 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
 function App() {
   const [pages, setPages] = useState(1)
   const [keywordInput, setKeywordInput] = useState('')
+  const [writerInput, setWriterInput] = useState('')
+  const [locationInput, setLocationInput] = useState('')
   const [excludeKeywords, setExcludeKeywords] = useState(() => {
     const saved = localStorage.getItem('excludeKeywords')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [excludeWriters, setExcludeWriters] = useState(() => {
+    const saved = localStorage.getItem('excludeWriters')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [excludeLocations, setExcludeLocations] = useState(() => {
+    const saved = localStorage.getItem('excludeLocations')
     return saved ? JSON.parse(saved) : []
   })
   const [listings, setListings] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // Save keywords to localStorage whenever they change
+  // Save exclude lists to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('excludeKeywords', JSON.stringify(excludeKeywords))
   }, [excludeKeywords])
+
+  useEffect(() => {
+    localStorage.setItem('excludeWriters', JSON.stringify(excludeWriters))
+  }, [excludeWriters])
+
+  useEffect(() => {
+    localStorage.setItem('excludeLocations', JSON.stringify(excludeLocations))
+  }, [excludeLocations])
+
+  // Filter listings by excluding matched writers and locations
+  const filteredListings = useMemo(() => {
+    return listings.filter(item => {
+      // Client-side keyword exclusion (matches server-side logic)
+      const keywordExcluded = excludeKeywords.some(keyword => {
+        const k = keyword.trim().toLowerCase()
+        if (!k) return false
+        return item.title.toLowerCase().includes(k) ||
+               item.writer.toLowerCase().includes(k) ||
+               item.category.toLowerCase().includes(k)
+      })
+      const writerExcluded = excludeWriters.some(w =>
+        item.writer.toLowerCase().includes(w.toLowerCase())
+      )
+      const locationExcluded = excludeLocations.some(l =>
+        item.location.toLowerCase().includes(l.toLowerCase())
+      )
+      return !keywordExcluded && !writerExcluded && !locationExcluded
+    })
+  }, [listings, excludeKeywords, excludeWriters, excludeLocations])
 
   const handleAddKeyword = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
@@ -27,8 +66,36 @@ function App() {
     }
   }
 
+  const handleAddWriter = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      const trimmed = writerInput.trim()
+      if (trimmed && !excludeWriters.includes(trimmed)) {
+        setExcludeWriters([...excludeWriters, trimmed])
+        setWriterInput('')
+      }
+    }
+  }
+
+  const handleAddLocation = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      const trimmed = locationInput.trim()
+      if (trimmed && !excludeLocations.includes(trimmed)) {
+        setExcludeLocations([...excludeLocations, trimmed])
+        setLocationInput('')
+      }
+    }
+  }
+
   const removeKeyword = (keyword) => {
     setExcludeKeywords(excludeKeywords.filter(k => k !== keyword))
+  }
+
+  const removeWriter = (writer) => {
+    setExcludeWriters(excludeWriters.filter(w => w !== writer))
+  }
+
+  const removeLocation = (location) => {
+    setExcludeLocations(excludeLocations.filter(l => l !== location))
   }
 
   const handleScrape = async () => {
@@ -59,10 +126,9 @@ function App() {
   return (
     <div className="app-layout">
       <aside className="sidebar">
-        <div className="sidebar-header">
+        {/* Exclude Keywords Section */}
+        <div className="filter-section">
           <h2>Exclude Keywords</h2>
-        </div>
-        <div className="sidebar-content">
           <div className="keyword-input-group">
             <input
               type="text"
@@ -82,6 +148,58 @@ function App() {
             ))}
             {excludeKeywords.length === 0 && (
               <p className="empty-keywords">No keywords excluded</p>
+            )}
+          </div>
+        </div>
+
+        {/* Exclude Writers Section */}
+        <div className="filter-section">
+          <h2>Exclude Writers</h2>
+          <div className="keyword-input-group">
+            <input
+              type="text"
+              placeholder="Add writer..."
+              value={writerInput}
+              onChange={(e) => setWriterInput(e.target.value)}
+              onKeyDown={handleAddWriter}
+            />
+            <button onClick={handleAddWriter} className="btn-add">Add</button>
+          </div>
+          <div className="keyword-list">
+            {excludeWriters.map((w, i) => (
+              <div key={i} className="keyword-tag writer-tag">
+                <span>{w}</span>
+                <button onClick={() => removeWriter(w)} className="btn-remove">×</button>
+              </div>
+            ))}
+            {excludeWriters.length === 0 && (
+              <p className="empty-keywords">No writers excluded</p>
+            )}
+          </div>
+        </div>
+
+        {/* Exclude Locations Section */}
+        <div className="filter-section">
+          <h2>Exclude Locations</h2>
+          <div className="keyword-input-group">
+            <input
+              type="text"
+              placeholder="Add location..."
+              value={locationInput}
+              onChange={(e) => setLocationInput(e.target.value)}
+              onKeyDown={handleAddLocation}
+            />
+            <button onClick={handleAddLocation} className="btn-add">Add</button>
+          </div>
+          <div className="keyword-list">
+            {excludeLocations.map((l, i) => (
+              <div key={i} className="keyword-tag location-tag-sidebar">
+                <span>{l}</span>
+                <button onClick={() => removeLocation(l)} className="btn-remove">×</button>
+              </div>
+            ))}
+            {excludeLocations.length === 0 && (
+              <p className="empty-keywords">No locations excluded</p>
             )}
           </div>
         </div>
@@ -119,7 +237,7 @@ function App() {
 
         <div className="results-panel">
           <div className="results-header">
-            <span>Total Results: {listings.length}</span>
+            <span>Total Results: {filteredListings.length}{listings.length !== filteredListings.length ? ` of ${listings.length}` : ''}</span>
           </div>
           <div className="table-container">
             <table>
@@ -135,10 +253,10 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {listings.length > 0 ? (
-                  listings.map((item) => (
+                {filteredListings.length > 0 ? (
+                  filteredListings.map((item, idx) => (
                     <tr key={item.index}>
-                      <td className="col-index">{item.index}</td>
+                      <td className="col-index">{idx + 1}</td>
                       <td className="col-title">
                         <a href={item.link} target="_blank" rel="noopener noreferrer">
                           {item.title}
@@ -158,7 +276,7 @@ function App() {
                 ) : (
                   <tr>
                     <td colSpan="7" className="empty-state">
-                      {isLoading ? 'Fetching data...' : 'No listings found. Start by clicking Scrape.'}
+                      {isLoading ? 'Fetching data...' : listings.length > 0 ? 'No listings match the current filters.' : 'No listings found. Start by clicking Scrape.'}
                     </td>
                   </tr>
                 )}

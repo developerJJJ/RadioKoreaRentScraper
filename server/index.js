@@ -73,7 +73,7 @@ app.post('/api/scrape', async (req, res) => {
                     allListings.push({
                         index: globalIndex++,
                         title,
-                        link: link.startsWith('http') ? link : `https://www.radiokorea.com/bulletin/bbs/${link}`,
+                        link: link.startsWith('http') ? link : `https://www.radiokorea.com${link.startsWith('/') ? link : '/bulletin/bbs/' + link.replace(/^\.\.\/bbs\//, '')}`,
                         price,
                         writer,
                         location,
