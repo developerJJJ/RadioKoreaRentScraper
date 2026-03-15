@@ -81,6 +81,10 @@ body {
   color: #10b981;
 }
 
+.filter-section:nth-child(4) h2 {
+  color: #e11d48;
+}
+
 .sidebar h2 {
   font-size: 0.9rem;
   font-weight: 700;
@@ -152,6 +156,15 @@ body {
 
 .location-tag-sidebar:hover {
   background: rgba(16, 185, 129, 0.15);
+}
+
+.category-tag-sidebar {
+  background: rgba(225, 29, 72, 0.1);
+  border-color: rgba(225, 29, 72, 0.2);
+}
+
+.category-tag-sidebar:hover {
+  background: rgba(225, 29, 72, 0.15);
 }
 
 .keyword-tag span {

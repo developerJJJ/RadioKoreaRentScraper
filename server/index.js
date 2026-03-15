@@ -49,6 +49,12 @@ app.post('/api/scrape', async (req, res) => {
                 if (mainLink.length === 0) return;
 
                 const link = mainLink.attr('href');
+                
+                // Only include native c_realestate board listings, skip premium/ads pointing elsewhere
+                if (!link.includes('c_realestate')) {
+                    return;
+                }
+
                 const title = item.find('h3').text().trim() || mainLink.text().trim();
                 
                 // Skip notices or empty/advertisement rows if possible

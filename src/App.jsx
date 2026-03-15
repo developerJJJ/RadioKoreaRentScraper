@@ -6,6 +6,7 @@ function App() {
   const [keywordInput, setKeywordInput] = useState('')
   const [writerInput, setWriterInput] = useState('')
   const [locationInput, setLocationInput] = useState('')
+  const [categoryInput, setCategoryInput] = useState('')
   const [excludeKeywords, setExcludeKeywords] = useState(() => {
     const saved = localStorage.getItem('excludeKeywords')
     return saved ? JSON.parse(saved) : []
@@ -16,6 +17,10 @@ function App() {
   })
   const [excludeLocations, setExcludeLocations] = useState(() => {
     const saved = localStorage.getItem('excludeLocations')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [excludeCategories, setExcludeCategories] = useState(() => {
+    const saved = localStorage.getItem('excludeCategories')
     return saved ? JSON.parse(saved) : []
   })
   const [listings, setListings] = useState([])
@@ -35,6 +40,10 @@ function App() {
     localStorage.setItem('excludeLocations', JSON.stringify(excludeLocations))
   }, [excludeLocations])
 
+  useEffect(() => {
+    localStorage.setItem('excludeCategories', JSON.stringify(excludeCategories))
+  }, [excludeCategories])
+
   // Filter listings by excluding matched writers and locations
   const filteredListings = useMemo(() => {
     return listings.filter(item => {
@@ -52,9 +61,12 @@ function App() {
       const locationExcluded = excludeLocations.some(l =>
         item.location.toLowerCase().includes(l.toLowerCase())
       )
-      return !keywordExcluded && !writerExcluded && !locationExcluded
+      const categoryExcluded = excludeCategories.some(c =>
+        item.category.toLowerCase().includes(c.toLowerCase())
+      )
+      return !keywordExcluded && !writerExcluded && !locationExcluded && !categoryExcluded
     })
-  }, [listings, excludeKeywords, excludeWriters, excludeLocations])
+  }, [listings, excludeKeywords, excludeWriters, excludeLocations, excludeCategories])
 
   const handleAddKeyword = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
@@ -86,6 +98,16 @@ function App() {
     }
   }
 
+  const handleAddCategory = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      const trimmed = categoryInput.trim()
+      if (trimmed && !excludeCategories.includes(trimmed)) {
+        setExcludeCategories([...excludeCategories, trimmed])
+        setCategoryInput('')
+      }
+    }
+  }
+
   const removeKeyword = (keyword) => {
     setExcludeKeywords(excludeKeywords.filter(k => k !== keyword))
   }
@@ -96,6 +118,10 @@ function App() {
 
   const removeLocation = (location) => {
     setExcludeLocations(excludeLocations.filter(l => l !== location))
+  }
+
+  const removeCategory = (category) => {
+    setExcludeCategories(excludeCategories.filter(c => c !== category))
   }
 
   const handleScrape = async () => {
@@ -200,6 +226,32 @@ function App() {
             ))}
             {excludeLocations.length === 0 && (
               <p className="empty-keywords">No locations excluded</p>
+            )}
+          </div>
+        </div>
+
+        {/* Exclude Categories Section */}
+        <div className="filter-section">
+          <h2>Exclude Categories</h2>
+          <div className="keyword-input-group">
+            <input
+              type="text"
+              placeholder="Add category..."
+              value={categoryInput}
+              onChange={(e) => setCategoryInput(e.target.value)}
+              onKeyDown={handleAddCategory}
+            />
+            <button onClick={handleAddCategory} className="btn-add">Add</button>
+          </div>
+          <div className="keyword-list">
+            {excludeCategories.map((c, i) => (
+              <div key={i} className="keyword-tag category-tag-sidebar">
+                <span>{c}</span>
+                <button onClick={() => removeCategory(c)} className="btn-remove">×</button>
+              </div>
+            ))}
+            {excludeCategories.length === 0 && (
+              <p className="empty-keywords">No categories excluded</p>
             )}
           </div>
         </div>
